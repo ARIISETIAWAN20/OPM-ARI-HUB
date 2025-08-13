@@ -1,5 +1,5 @@
 -- ARI HUB V2 for Delta Executor (Android)
--- By Bebang (Premium Version)
+-- By Bebang (Premium Version with Persistent Speed)
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
@@ -343,18 +343,45 @@ local function createESP(player)
     end)
 end
 
--- Speed System with respawn persistence
-local function applySpeed()
-    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid.WalkSpeed = SETTINGS.Movement.Speed
+-- Improved Speed System with persistent speed
+local speedConnection = nil
+local function setupSpeedSystem()
+    -- Disconnect previous connection if exists
+    if speedConnection then
+        speedConnection:Disconnect()
+        speedConnection = nil
+    end
+
+    local function applySpeed()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            local humanoid = LocalPlayer.Character.Humanoid
+            
+            -- Apply speed immediately
+            humanoid.WalkSpeed = SETTINGS.Movement.Speed
+            
+            -- Create a connection to constantly reapply the speed
+            speedConnection = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                if humanoid.WalkSpeed ~= SETTINGS.Movement.Speed then
+                    humanoid.WalkSpeed = SETTINGS.Movement.Speed
+                end
+            end)
+        end
+    end
+
+    -- Apply speed when character is added
+    LocalPlayer.CharacterAdded:Connect(function(character)
+        wait(0.5) -- Small delay to ensure humanoid is loaded
+        applySpeed()
+    end)
+
+    -- Apply speed immediately if character already exists
+    if LocalPlayer.Character then
+        applySpeed()
     end
 end
 
--- Apply speed when character respawns
-LocalPlayer.CharacterAdded:Connect(function(character)
-    wait(0.5) -- Small delay to ensure humanoid is loaded
-    applySpeed()
-end)
+-- Initialize speed system
+setupSpeedSystem()
 
 -- Update Player List
 local function updatePlayerList()
@@ -444,6 +471,9 @@ end
 -- UI Events
 CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
+    if speedConnection then
+        speedConnection:Disconnect()
+    end
 end)
 
 local isMinimized = false
@@ -500,7 +530,7 @@ SpeedApply.MouseButton1Click:Connect(function()
     local speed = tonumber(SpeedBox.Text)
     if speed and speed > 0 then
         SETTINGS.Movement.Speed = speed
-        applySpeed()
+        setupSpeedSystem() -- Reinitialize speed system with new speed
         SaveSettings()
     end
 end)
@@ -511,7 +541,6 @@ end)
 
 -- Initialize
 updatePlayerList()
-applySpeed() -- Apply speed immediately
 updateAntiFall()
 
 -- Initialize ESP if enabled
@@ -529,23 +558,4 @@ UserInputService.JumpRequest:Connect(function()
 end)
 
 Players.PlayerAdded:Connect(function(player)
-    if SETTINGS.ESP.Enabled then
-        createESP(player)
-    end
-    updatePlayerList()
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    if ESPCache[player] then
-        if ESPCache[player].Box then ESPCache[player].Box:Destroy() end
-        if ESPCache[player].NameLabel then ESPCache[player].NameLabel:Destroy() end
-        if ESPCache[player].DistanceLabel then ESPCache[player].DistanceLabel:Destroy() end
-        ESPCache[player] = nil
-    end
-    updatePlayerList()
-end)
-
--- Auto-update
-while wait(1) do
-    SaveSettings()
-end
+    if SETTINGS.ESP.Enabled t
