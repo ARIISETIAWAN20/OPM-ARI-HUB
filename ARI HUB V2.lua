@@ -1,3 +1,6 @@
+Here's the improved script with a fixed speed system that persists through respawns, deaths, and damage:
+
+```lua
 -- ARI HUB V2 for Delta Executor (Android)
 -- By Bebang (Premium Version with Persistent Speed)
 
@@ -553,9 +556,4 @@ end
 -- Connections
 RunService.Stepped:Connect(noclip)
 
-UserInputService.JumpRequest:Connect(function()
-    infiniteJump()
-end)
-
-Players.PlayerAdded:Connect(function(player)
-    if SETTINGS.ESP.Enabled t
+UserInputService.JumpRequest:Conne
