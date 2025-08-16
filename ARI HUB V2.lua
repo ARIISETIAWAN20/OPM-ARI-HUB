@@ -1,14 +1,19 @@
--- ARI HUB V2 for Delta Executor (Android)
--- By Bebang (Premium Version)
+-- ARI HUB V2 - Premium Mobile Hack (Fixed for Delta Executor) | By Bebang
+-- Compatible: Delta Executor (Android) - No CoreGui - Only ScreenGui
 
+local pcall, wait, ipairs, pairs, tonumber = pcall, wait, ipairs, pairs, tonumber
+local game = game
+local workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
 local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
 
--- Settings (with auto-save functionality)
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- == Settings ==
 local SETTINGS = {
     ESP = { Enabled = false, MaxDistance = 1000 },
     Noclip = { Enabled = false },
@@ -17,54 +22,65 @@ local SETTINGS = {
     Teleport = { Target = nil }
 }
 
--- Load settings if they exist
+-- == Load Settings ==
 local function LoadSettings()
-    local success, savedSettings = pcall(function()
+    local success, data = pcall(function()
         return readfile("MobileHackSettings.json")
     end)
-    if success and savedSettings then
-        SETTINGS = game:GetService("HttpService"):JSONDecode(savedSettings)
+    if success and data then
+        local ok, config = pcall(HttpService.JSONDecode, HttpService, data)
+        if ok then
+            SETTINGS = config
+        end
     end
 end
 
--- Save settings
+-- == Save Settings ==
 local function SaveSettings()
-    local json = game:GetService("HttpService"):JSONEncode(SETTINGS)
-    writefile("MobileHackSettings.json", json)
+    local json = pcall(function()
+        return HttpService:JSONEncode(SETTINGS)
+    end)
+    if json then
+        pcall(function()
+            writefile("MobileHackSettings.json", json)
+        end)
+    end
 end
 
--- Load settings immediately
 LoadSettings()
 
--- UI Setup (Premium Glossy Design)
+-- == Wait for PlayerGui ==
+LocalPlayer:WaitForChild("PlayerGui")
+
+-- == Create ScreenGui ==
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MobileHackUI"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = LocalPlayer.PlayerGui -- ✅ Hanya ScreenGui, bukan CoreGui
 
+-- == Main Frame ==
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 280, 0, 350)
 MainFrame.Position = UDim2.new(0.5, -140, 0.5, -175)
 MainFrame.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-MainFrame.BackgroundTransparency = 0.2 -- Slightly transparent
+MainFrame.BackgroundTransparency = 0.2
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
 
--- Rounded corners
+-- == Rounded Corners ==
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12) -- Rounded corners
+UICorner.CornerRadius = UDim.new(0, 12)
 UICorner.Parent = MainFrame
 
--- Glossy effect
+-- == Glossy Border ==
 local UIStroke = Instance.new("UIStroke")
 UIStroke.Thickness = 2
 UIStroke.Color = Color3.fromRGB(150, 150, 150)
 UIStroke.Transparency = 0.7
 UIStroke.Parent = MainFrame
 
-MainFrame.Parent = ScreenGui
-
--- Title Bar with animated blue text
+-- == Title Bar ==
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 30)
 TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -77,31 +93,27 @@ Title.Size = UDim2.new(1, -60, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.SourceSansBold
-Title.TextSize = 16
+Title.TextSize = 18
 Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.TextColor3 = Color3.fromRGB(0, 150, 255)
 Title.Parent = TitleBar
 
--- Animate title color
-local titleColors = {
-    Color3.fromRGB(0, 100, 255),
-    Color3.fromRGB(0, 150, 255),
-    Color3.fromRGB(0, 200, 255),
-    Color3.fromRGB(0, 150, 255)
-}
-
-local currentColorIndex = 1
-local function animateTitle()
+-- == Animate Title ==
+coroutine.wrap(function()
+    local colors = {
+        Color3.fromRGB(0, 100, 255),
+        Color3.fromRGB(0, 200, 255),
+        Color3.fromRGB(0, 150, 255)
+    }
     while true do
-        currentColorIndex = currentColorIndex % #titleColors + 1
-        local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Linear)
-        local tween = TweenService:Create(Title, tweenInfo, {TextColor3 = titleColors[currentColorIndex]})
-        tween:Play()
-        wait(1.5)
+        for i = 1, #colors do
+            Title.TextColor3 = colors[i]
+            wait(1.5)
+        end
     end
-end
-coroutine.wrap(animateTitle)()
+end)()
 
--- Control Buttons
+-- == Close Button ==
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 30, 1, 0)
 CloseButton.Position = UDim2.new(1, -30, 0, 0)
@@ -113,6 +125,7 @@ CloseButton.Font = Enum.Font.SourceSansBold
 CloseButton.TextSize = 16
 CloseButton.Parent = TitleBar
 
+-- == Minimize Button ==
 local MinimizeButton = Instance.new("TextButton")
 MinimizeButton.Size = UDim2.new(0, 30, 1, 0)
 MinimizeButton.Position = UDim2.new(1, -60, 0, 0)
@@ -124,14 +137,14 @@ MinimizeButton.Font = Enum.Font.SourceSansBold
 MinimizeButton.TextSize = 16
 MinimizeButton.Parent = TitleBar
 
--- Content Frame
+-- == Content Frame ==
 local ContentFrame = Instance.new("Frame")
 ContentFrame.Size = UDim2.new(1, -10, 1, -40)
 ContentFrame.Position = UDim2.new(0, 5, 0, 35)
 ContentFrame.BackgroundTransparency = 1
 ContentFrame.Parent = MainFrame
 
--- ESP Toggle
+-- == ESP Toggle ==
 local ESPToggle = Instance.new("TextButton")
 ESPToggle.Size = UDim2.new(0.9, 0, 0, 40)
 ESPToggle.Position = UDim2.new(0.05, 0, 0, 0)
@@ -143,7 +156,7 @@ ESPToggle.Font = Enum.Font.SourceSansBold
 ESPToggle.TextSize = 16
 ESPToggle.Parent = ContentFrame
 
--- Player List for Teleport
+-- == Player List ==
 local PlayerList = Instance.new("ScrollingFrame")
 PlayerList.Size = UDim2.new(0.9, 0, 0, 100)
 PlayerList.Position = UDim2.new(0.05, 0, 0.15, 0)
@@ -152,7 +165,7 @@ PlayerList.BackgroundTransparency = 0.2
 PlayerList.ScrollBarThickness = 5
 PlayerList.Parent = ContentFrame
 
--- Speed Control
+-- == Speed Input ==
 local SpeedBox = Instance.new("TextBox")
 SpeedBox.Size = UDim2.new(0.6, 0, 0, 30)
 SpeedBox.Position = UDim2.new(0.05, 0, 0.5, 0)
@@ -176,7 +189,7 @@ SpeedApply.Font = Enum.Font.SourceSans
 SpeedApply.TextSize = 14
 SpeedApply.Parent = ContentFrame
 
--- Feature Toggles
+-- == Feature Toggles ==
 local NoclipToggle = Instance.new("TextButton")
 NoclipToggle.Size = UDim2.new(0.43, 0, 0, 30)
 NoclipToggle.Position = UDim2.new(0.05, 0, 0.65, 0)
@@ -221,177 +234,173 @@ TeleportButton.Font = Enum.Font.SourceSans
 TeleportButton.TextSize = 14
 TeleportButton.Parent = ContentFrame
 
--- Apply rounded corners to all buttons
+-- == Apply Styling to Buttons/TextBox ==
 for _, child in ipairs(ContentFrame:GetChildren()) do
     if child:IsA("TextButton") or child:IsA("TextBox") then
-        local btnCorner = Instance.new("UICorner")
-        btnCorner.CornerRadius = UDim.new(0, 8)
-        btnCorner.Parent = child
-        
-        local btnStroke = Instance.new("UIStroke")
-        btnStroke.Thickness = 1
-        btnStroke.Color = Color3.fromRGB(150, 150, 150)
-        btnStroke.Transparency = 0.7
-        btnStroke.Parent = child
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = child
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 1
+        stroke.Color = Color3.fromRGB(150, 150, 150)
+        stroke.Transparency = 0.7
+        stroke.Parent = child
     end
 end
 
--- ESP System (same as before)
+-- == ESP System (Fixed Position & Size) ==
 local ESPCache = {}
 
-local function createESP(player)
+local function CreateESP(player)
     if player == LocalPlayer then return end
-    if ESPCache[player] then 
-        if ESPCache[player].Box then ESPCache[player].Box:Destroy() end
-        if ESPCache[player].NameLabel then ESPCache[player].NameLabel:Destroy() end
-        if ESPCache[player].DistanceLabel then ESPCache[player].DistanceLabel:Destroy() end
+    if ESPCache[player] then
+        for _, obj in pairs(ESPCache[player]) do
+            if obj and obj.Parent then obj:Destroy() end
+        end
         ESPCache[player] = nil
     end
-    
-    local function setupESP(character)
+
+    local function Setup(character)
         if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-        
-        local rootPart = character:WaitForChild("HumanoidRootPart")
-        
-        local esp = {
-            Box = Instance.new("BoxHandleAdornment"),
-            NameLabel = Instance.new("TextLabel"),
-            DistanceLabel = Instance.new("TextLabel")
-        }
-        
-        esp.Box.Adornee = rootPart
-        esp.Box.AlwaysOnTop = true
-        esp.Box.Size = Vector3.new(2, 3, 1)
-        esp.Box.Color3 = Color3.fromRGB(255, 50, 50)
-        esp.Box.Transparency = 0.5
-        esp.Box.Parent = rootPart
-        
-        esp.NameLabel.Size = UDim2.new(0, 200, 0, 20)
-        esp.NameLabel.BackgroundTransparency = 1
-        esp.NameLabel.TextColor3 = Color3.new(1, 1, 1)
-        esp.NameLabel.Text = player.Name
-        esp.NameLabel.Font = Enum.Font.SourceSansBold
-        esp.NameLabel.TextSize = 14
-        esp.NameLabel.Parent = ScreenGui
-        
-        esp.DistanceLabel.Size = UDim2.new(0, 200, 0, 20)
-        esp.DistanceLabel.BackgroundTransparency = 1
-        esp.DistanceLabel.TextColor3 = Color3.new(1, 1, 1)
-        esp.DistanceLabel.Font = Enum.Font.SourceSans
-        esp.DistanceLabel.TextSize = 12
-        esp.DistanceLabel.Parent = ScreenGui
-        
-        ESPCache[player] = esp
-        
-        local function update()
-            if not SETTINGS.ESP.Enabled or not character or not rootPart or not rootPart.Parent then
-                esp.Box.Visible = false
-                esp.NameLabel.Visible = false
-                esp.DistanceLabel.Visible = false
+        local root = character:FindFirstChild("HumanoidRootPart")
+
+        -- ESP Box
+        local Box = Instance.new("BoxHandleAdornment")
+        Box.Adornee = root
+        Box.AlwaysOnTop = true
+        Box.Size = Vector3.new(2, 3, 1)
+        Box.Color3 = Color3.fromRGB(255, 50, 50)
+        Box.Transparency = 0.4
+        Box.ZIndex = 10
+        Box.Parent = root
+
+        -- Name Label
+        local NameLabel = Instance.new("TextLabel")
+        NameLabel.Size = UDim2.new(0, 180, 0, 20)
+        NameLabel.BackgroundTransparency = 1
+        NameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        NameLabel.Text = player.Name
+        NameLabel.Font = Enum.Font.SourceSansBold
+        NameLabel.TextSize = 16
+        NameLabel.Visible = false
+        NameLabel.ZIndex = 10
+        NameLabel.Parent = ScreenGui
+
+        -- Distance Label
+        local DistanceLabel = Instance.new("TextLabel")
+        DistanceLabel.Size = UDim2.new(0, 180, 0, 20)
+        DistanceLabel.BackgroundTransparency = 1
+        DistanceLabel.TextColor3 = Color3.fromRGB(200, 200, 100)
+        DistanceLabel.Text = ""
+        DistanceLabel.Font = Enum.Font.SourceSans
+        DistanceLabel.TextSize = 14
+        DistanceLabel.Visible = false
+        DistanceLabel.ZIndex = 10
+        DistanceLabel.Parent = ScreenGui
+
+        ESPCache[player] = { Box, NameLabel, DistanceLabel }
+
+        local function Update()
+            if not SETTINGS.ESP.Enabled or not root or not root.Parent then
+                for _, obj in pairs(ESPCache[player]) do
+                    if obj and obj.Parent then obj.Visible = false end
+                end
                 return
             end
-            
-            local distance = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and 
-                            (LocalPlayer.Character.HumanoidRootPart.Position - rootPart.Position).Magnitude) or 0
-            if distance > SETTINGS.ESP.MaxDistance then
-                esp.Box.Visible = false
-                esp.NameLabel.Visible = false
-                esp.DistanceLabel.Visible = false
+
+            local myHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if not myHrp then return end
+
+            local dist = (myHrp.Position - root.Position).Magnitude
+            if dist > SETTINGS.ESP.MaxDistance then
+                NameLabel.Visible = false
+                DistanceLabel.Visible = false
+                Box.Visible = false
                 return
             end
-            
-            local vector, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+
+            local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
             if onScreen then
-                esp.NameLabel.Position = UDim2.new(0, vector.X, 0, vector.Y - 40)
-                esp.DistanceLabel.Position = UDim2.new(0, vector.X, 0, vector.Y - 20)
-                esp.DistanceLabel.Text = math.floor(distance).." studs"
-                
-                esp.Box.Visible = true
-                esp.NameLabel.Visible = true
-                esp.DistanceLabel.Visible = true
+                NameLabel.Position = UDim2.new(0, pos.X - 90, 0, pos.Y - 35)
+                DistanceLabel.Position = UDim2.new(0, pos.X - 90, 0, pos.Y - 18)
+                DistanceLabel.Text = math.floor(dist) .. " studs"
+                NameLabel.Visible = true
+                DistanceLabel.Visible = true
+                Box.Visible = true
             else
-                esp.NameLabel.Visible = false
-                esp.DistanceLabel.Visible = false
+                NameLabel.Visible = false
+                DistanceLabel.Visible = false
             end
         end
-        
-        local renderConnection
-        renderConnection = RunService.RenderStepped:Connect(update)
-        
+
+        local conn = RunService.RenderStepped:Connect(Update)
         character.Destroying:Connect(function()
-            if renderConnection then
-                renderConnection:Disconnect()
-                renderConnection = nil
+            conn:Disconnect()
+            for _, obj in pairs(ESPCache[player]) do
+                if obj and obj.Parent then obj:Destroy() end
             end
-            if ESPCache[player] then
-                if ESPCache[player].Box then ESPCache[player].Box:Destroy() end
-                if ESPCache[player].NameLabel then ESPCache[player].NameLabel:Destroy() end
-                if ESPCache[player].DistanceLabel then ESPCache[player].DistanceLabel:Destroy() end
-                ESPCache[player] = nil
-            end
+            ESPCache[player] = nil
         end)
     end
-    
-    if player.Character then
-        setupESP(player.Character)
-    end
-    
-    player.CharacterAdded:Connect(function(character)
-        if SETTINGS.ESP.Enabled then
-            setupESP(character)
-        end
+
+    if player.Character then Setup(player.Character) end
+    player.CharacterAdded:Connect(function(char)
+        if SETTINGS.ESP.Enabled then Setup(char) end
     end)
 end
 
--- Speed System with respawn persistence
-local function applySpeed()
+-- == Apply Speed ==
+local function ApplySpeed()
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid.WalkSpeed = SETTINGS.Movement.Speed
     end
 end
 
--- Apply speed when character respawns
-LocalPlayer.CharacterAdded:Connect(function(character)
-    wait(0.5) -- Small delay to ensure humanoid is loaded
-    applySpeed()
+LocalPlayer.CharacterAdded:Connect(function()
+    wait(0.5)
+    ApplySpeed()
 end)
 
--- Update Player List
-local function updatePlayerList()
-    PlayerList:ClearAllChildren()
-    
-    local yOffset = 0
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local button = Instance.new("TextButton")
-            button.Size = UDim2.new(1, -10, 0, 25)
-            button.Position = UDim2.new(0, 5, 0, yOffset)
-            button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            button.BackgroundTransparency = 0.2
-            button.TextColor3 = Color3.new(1, 1, 1)
-            button.Text = player.Name
-            button.Font = Enum.Font.SourceSans
-            button.TextSize = 14
-            button.Parent = PlayerList
-            
-            local btnCorner = Instance.new("UICorner")
-            btnCorner.CornerRadius = UDim.new(0, 6)
-            btnCorner.Parent = button
-            
-            button.MouseButton1Click:Connect(function()
-                SETTINGS.Teleport.Target = player
-                SaveSettings()
-            end)
-            
-            yOffset = yOffset + 30
+-- == Update Player List ==
+local function UpdatePlayerList()
+    for _, obj in ipairs(PlayerList:GetChildren()) do
+        if obj:IsA("TextButton") then
+            obj:Destroy()
         end
     end
-    
-    PlayerList.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+
+    local offset = 0
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, -10, 0, 25)
+            btn.Position = UDim2.new(0, 5, 0, offset)
+            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            btn.BackgroundTransparency = 0.2
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.Text = p.Name
+            btn.Font = Enum.Font.SourceSans
+            btn.TextSize = 14
+            btn.Parent = PlayerList
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 6)
+            corner.Parent = btn
+
+            btn.MouseButton1Click:Connect(function()
+                SETTINGS.Teleport.Target = p
+                SaveSettings()
+            end)
+
+            offset = offset + 30
+        end
+    end
+    PlayerList.CanvasSize = UDim2.new(0, 0, 0, offset)
 end
 
--- Noclip Function
-local function noclip()
+-- == Noclip ==
+RunService.Stepped:Connect(function()
     if SETTINGS.Noclip.Enabled and LocalPlayer.Character then
         for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -399,76 +408,74 @@ local function noclip()
             end
         end
     end
-end
+end)
 
--- Infinite Jump
-local function infiniteJump()
+-- == Infinite Jump ==
+UserInputService.JumpRequest:Connect(function()
     if SETTINGS.Movement.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
         LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
     end
-end
+end)
 
--- Anti-Fall Platform (Fixed to stay in place)
-local platform
-local function updateAntiFall()
+-- == Anti-Fall Platform ==
+local Platform = nil
+local function UpdateAntiFall()
     if SETTINGS.Safety.AntiFall then
-        if not platform then
-            platform = Instance.new("Part")
-            platform.Size = Vector3.new(50, 1, 50)
-            platform.Anchored = true
-            platform.Transparency = 0.7
-            platform.Color = Color3.fromRGB(100, 100, 255)
-            platform.CanCollide = true
-            platform.Parent = workspace
-            
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                platform.Position = LocalPlayer.Character.HumanoidRootPart.Position - Vector3.new(0, 10, 0)
-            else
-                platform.Position = Vector3.new(0, 0, 0)
-            end
+        if not Platform then
+            Platform = Instance.new("Part")
+            Platform.Size = Vector3.new(50, 1, 50)
+            Platform.Anchored = true
+            Platform.Transparency = 0.7
+            Platform.Color = Color3.fromRGB(100, 100, 255)
+            Platform.CanCollide = true
+            Platform.Parent = workspace
         end
-    elseif platform then
-        platform:Destroy()
-        platform = nil
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            Platform.Position = LocalPlayer.Character.HumanoidRootPart.Position - Vector3.new(0, 10, 0)
+        end
+    elseif Platform then
+        Platform:Destroy()
+        Platform = nil
     end
 end
 
--- Teleport Function
-local function teleport()
+-- == Teleport Function ==
+local function Teleport()
     if SETTINGS.Teleport.Target and SETTINGS.Teleport.Target.Character and LocalPlayer.Character then
-        LocalPlayer.Character:FindFirstChild("HumanoidRootPart").CFrame = SETTINGS.Teleport.Target.Character:FindFirstChild("HumanoidRootPart").CFrame
-        SaveSettings()
+        local targetHrp = SETTINGS.Teleport.Target.Character:FindFirstChild("HumanoidRootPart")
+        local myHrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetHrp and myHrp then
+            myHrp.CFrame = targetHrp.CFrame
+        end
     end
 end
 
--- UI Events
+-- == UI Events ==
 CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-local isMinimized = false
 MinimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    MainFrame.Size = isMinimized and UDim2.new(0, 280, 0, 30) or UDim2.new(0, 280, 0, 350)
-    ContentFrame.Visible = not isMinimized
-    MinimizeButton.Text = isMinimized and "+" or "-"
+    local isMin = MainFrame.Size == UDim2.new(0, 280, 0, 30)
+    MainFrame.Size = isMin and UDim2.new(0, 280, 0, 350) or UDim2.new(0, 280, 0, 30)
+    ContentFrame.Visible = isMin
+    MinimizeButton.Text = isMin and "-" or "+"
 end)
 
 ESPToggle.MouseButton1Click:Connect(function()
     SETTINGS.ESP.Enabled = not SETTINGS.ESP.Enabled
     ESPToggle.BackgroundColor3 = SETTINGS.ESP.Enabled and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)
-    ESPToggle.Text = SETTINGS.ESP.Enabled and "ESP: ON" or "ESP: OFF"
+    ESPToggle.Text = "ESP: "..(SETTINGS.ESP.Enabled and "ON" or "OFF")
     SaveSettings()
-    
     if SETTINGS.ESP.Enabled then
-        for _, player in ipairs(Players:GetPlayers()) do
-            createESP(player)
+        for _, p in ipairs(Players:GetPlayers()) do
+            CreateESP(p)
         end
     else
         for _, esp in pairs(ESPCache) do
-            if esp.Box then esp.Box:Destroy() end
-            if esp.NameLabel then esp.NameLabel:Destroy() end
-            if esp.DistanceLabel then esp.DistanceLabel:Destroy() end
+            for _, obj in pairs(esp) do
+                if obj and obj.Parent then obj:Destroy() end
+            end
         end
         ESPCache = {}
     end
@@ -492,7 +499,7 @@ AntiFallToggle.MouseButton1Click:Connect(function()
     SETTINGS.Safety.AntiFall = not SETTINGS.Safety.AntiFall
     AntiFallToggle.BackgroundColor3 = SETTINGS.Safety.AntiFall and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)
     AntiFallToggle.Text = "Anti-Fall: "..(SETTINGS.Safety.AntiFall and "ON" or "OFF")
-    updateAntiFall()
+    UpdateAntiFall()
     SaveSettings()
 end)
 
@@ -500,52 +507,41 @@ SpeedApply.MouseButton1Click:Connect(function()
     local speed = tonumber(SpeedBox.Text)
     if speed and speed > 0 then
         SETTINGS.Movement.Speed = speed
-        applySpeed()
+        ApplySpeed()
         SaveSettings()
     end
 end)
 
-TeleportButton.MouseButton1Click:Connect(function()
-    teleport()
-end)
+TeleportButton.MouseButton1Click:Connect(Teleport)
 
--- Initialize
-updatePlayerList()
-applySpeed() -- Apply speed immediately
-updateAntiFall()
+-- == Initialize ==
+UpdatePlayerList()
+ApplySpeed()
+UpdateAntiFall()
 
--- Initialize ESP if enabled
 if SETTINGS.ESP.Enabled then
-    for _, player in ipairs(Players:GetPlayers()) do
-        createESP(player)
+    for _, p in ipairs(Players:GetPlayers()) do
+        CreateESP(p)
     end
 end
 
--- Connections
-RunService.Stepped:Connect(noclip)
-
-UserInputService.JumpRequest:Connect(function()
-    infiniteJump()
+-- == Player Events ==
+Players.PlayerAdded:Connect(function(p)
+    if SETTINGS.ESP.Enabled then CreateESP(p) end
+    UpdatePlayerList()
 end)
 
-Players.PlayerAdded:Connect(function(player)
-    if SETTINGS.ESP.Enabled then
-        createESP(player)
+Players.PlayerRemoving:Connect(function(p)
+    if ESPCache[p] then
+        for _, obj in pairs(ESPCache[p]) do
+            if obj and obj.Parent then obj:Destroy() end
+        end
+        ESPCache[p] = nil
     end
-    updatePlayerList()
+    UpdatePlayerList()
 end)
 
-Players.PlayerRemoving:Connect(function(player)
-    if ESPCache[player] then
-        if ESPCache[player].Box then ESPCache[player].Box:Destroy() end
-        if ESPCache[player].NameLabel then ESPCache[player].NameLabel:Destroy() end
-        if ESPCache[player].DistanceLabel then ESPCache[player].DistanceLabel:Destroy() end
-        ESPCache[player] = nil
-    end
-    updatePlayerList()
-end)
-
--- Auto-update
-while wait(1) do
+-- == Auto Save Every 10 Seconds ==
+while wait(10) do
     SaveSettings()
 end
