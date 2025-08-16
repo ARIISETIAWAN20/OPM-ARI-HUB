@@ -1,5 +1,5 @@
--- ARI HUB V2 - Premium Mobile Hack (Fixed for Delta Executor) | By Bebang
--- Compatible: Delta Executor (Android) - No CoreGui - Only ScreenGui
+-- ARI HUB V2 - Premium Mobile Hack | By Bebang
+-- Auto-Save to Folder: ARISE/ | Delta Executor Compatible | No CoreGui
 
 local pcall, wait, ipairs, pairs, tonumber = pcall, wait, ipairs, pairs, tonumber
 local game = game
@@ -13,7 +13,7 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- == Settings ==
+-- == Settings Default ==
 local SETTINGS = {
     ESP = { Enabled = false, MaxDistance = 1000 },
     Noclip = { Enabled = false },
@@ -22,31 +22,42 @@ local SETTINGS = {
     Teleport = { Target = nil }
 }
 
+-- == Folder & File Path ==
+local FOLDER = "ARISE"
+local FILE = FOLDER .. "/MobileHackSettings.json"
+
+-- == Create Folder (if not exists) ==
+pcall(function()
+    makefolder(FOLDER)
+end)
+
 -- == Load Settings ==
 local function LoadSettings()
     local success, data = pcall(function()
-        return readfile("MobileHackSettings.json")
+        return readfile(FILE)
     end)
     if success and data then
         local ok, config = pcall(HttpService.JSONDecode, HttpService, data)
         if ok then
-            SETTINGS = config
+            -- Merge loaded settings with default (in case new fields added)
+            for k, v in pairs(config) do
+                SETTINGS[k] = v
+            end
         end
     end
 end
 
--- == Save Settings ==
+-- == Save Settings (Auto-Save) ==
 local function SaveSettings()
-    local json = pcall(function()
-        return HttpService:JSONEncode(SETTINGS)
-    end)
-    if json then
+    local success, json = pcall(HttpService.JSONEncode, HttpService, SETTINGS)
+    if success then
         pcall(function()
-            writefile("MobileHackSettings.json", json)
+            writefile(FILE, json)
         end)
     end
 end
 
+-- == Load on Start ==
 LoadSettings()
 
 -- == Wait for PlayerGui ==
@@ -56,7 +67,7 @@ LocalPlayer:WaitForChild("PlayerGui")
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "MobileHackUI"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer.PlayerGui -- ✅ Hanya ScreenGui, bukan CoreGui
+ScreenGui.Parent = LocalPlayer.PlayerGui
 
 -- == Main Frame ==
 local MainFrame = Instance.new("Frame")
@@ -103,11 +114,11 @@ coroutine.wrap(function()
     local colors = {
         Color3.fromRGB(0, 100, 255),
         Color3.fromRGB(0, 200, 255),
-        Color3.fromRGB(0, 150, 255)
+        Color3.fromRGB(0, 100, 255)
     }
     while true do
-        for i = 1, #colors do
-            Title.TextColor3 = colors[i]
+        for _, col in ipairs(colors) do
+            Title.TextColor3 = col
             wait(1.5)
         end
     end
@@ -234,7 +245,7 @@ TeleportButton.Font = Enum.Font.SourceSans
 TeleportButton.TextSize = 14
 TeleportButton.Parent = ContentFrame
 
--- == Apply Styling to Buttons/TextBox ==
+-- == Apply Styling ==
 for _, child in ipairs(ContentFrame:GetChildren()) do
     if child:IsA("TextButton") or child:IsA("TextBox") then
         local corner = Instance.new("UICorner")
@@ -249,7 +260,7 @@ for _, child in ipairs(ContentFrame:GetChildren()) do
     end
 end
 
--- == ESP System (Fixed Position & Size) ==
+-- == ESP System (Fixed) ==
 local ESPCache = {}
 
 local function CreateESP(player)
@@ -265,7 +276,6 @@ local function CreateESP(player)
         if not character or not character:FindFirstChild("HumanoidRootPart") then return end
         local root = character:FindFirstChild("HumanoidRootPart")
 
-        -- ESP Box
         local Box = Instance.new("BoxHandleAdornment")
         Box.Adornee = root
         Box.AlwaysOnTop = true
@@ -275,7 +285,6 @@ local function CreateESP(player)
         Box.ZIndex = 10
         Box.Parent = root
 
-        -- Name Label
         local NameLabel = Instance.new("TextLabel")
         NameLabel.Size = UDim2.new(0, 180, 0, 20)
         NameLabel.BackgroundTransparency = 1
@@ -287,7 +296,6 @@ local function CreateESP(player)
         NameLabel.ZIndex = 10
         NameLabel.Parent = ScreenGui
 
-        -- Distance Label
         local DistanceLabel = Instance.new("TextLabel")
         DistanceLabel.Size = UDim2.new(0, 180, 0, 20)
         DistanceLabel.BackgroundTransparency = 1
@@ -365,9 +373,7 @@ end)
 -- == Update Player List ==
 local function UpdatePlayerList()
     for _, obj in ipairs(PlayerList:GetChildren()) do
-        if obj:IsA("TextButton") then
-            obj:Destroy()
-        end
+        if obj:IsA("TextButton") then obj:Destroy() end
     end
 
     local offset = 0
@@ -390,7 +396,7 @@ local function UpdatePlayerList()
 
             btn.MouseButton1Click:Connect(function()
                 SETTINGS.Teleport.Target = p
-                SaveSettings()
+                SaveSettings() -- Auto-save teleport target
             end)
 
             offset = offset + 30
@@ -412,8 +418,11 @@ end)
 
 -- == Infinite Jump ==
 UserInputService.JumpRequest:Connect(function()
-    if SETTINGS.Movement.InfiniteJump and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    if SETTINGS.Movement.InfiniteJump then
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+        SaveSettings() -- Save state
     end
 end)
 
@@ -439,7 +448,7 @@ local function UpdateAntiFall()
     end
 end
 
--- == Teleport Function ==
+-- == Teleport ==
 local function Teleport()
     if SETTINGS.Teleport.Target and SETTINGS.Teleport.Target.Character and LocalPlayer.Character then
         local targetHrp = SETTINGS.Teleport.Target.Character:FindFirstChild("HumanoidRootPart")
@@ -450,7 +459,7 @@ local function Teleport()
     end
 end
 
--- == UI Events ==
+-- == UI Events (Auto-Save on Change) ==
 CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
@@ -466,7 +475,7 @@ ESPToggle.MouseButton1Click:Connect(function()
     SETTINGS.ESP.Enabled = not SETTINGS.ESP.Enabled
     ESPToggle.BackgroundColor3 = SETTINGS.ESP.Enabled and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)
     ESPToggle.Text = "ESP: "..(SETTINGS.ESP.Enabled and "ON" or "OFF")
-    SaveSettings()
+    SaveSettings() -- ✅ Auto-save
     if SETTINGS.ESP.Enabled then
         for _, p in ipairs(Players:GetPlayers()) do
             CreateESP(p)
@@ -485,14 +494,14 @@ NoclipToggle.MouseButton1Click:Connect(function()
     SETTINGS.Noclip.Enabled = not SETTINGS.Noclip.Enabled
     NoclipToggle.BackgroundColor3 = SETTINGS.Noclip.Enabled and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)
     NoclipToggle.Text = "Noclip: "..(SETTINGS.Noclip.Enabled and "ON" or "OFF")
-    SaveSettings()
+    SaveSettings() -- ✅ Auto-save
 end)
 
 InfJumpToggle.MouseButton1Click:Connect(function()
     SETTINGS.Movement.InfiniteJump = not SETTINGS.Movement.InfiniteJump
     InfJumpToggle.BackgroundColor3 = SETTINGS.Movement.InfiniteJump and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)
     InfJumpToggle.Text = "Inf Jump: "..(SETTINGS.Movement.InfiniteJump and "ON" or "OFF")
-    SaveSettings()
+    SaveSettings() -- ✅ Auto-save
 end)
 
 AntiFallToggle.MouseButton1Click:Connect(function()
@@ -500,7 +509,7 @@ AntiFallToggle.MouseButton1Click:Connect(function()
     AntiFallToggle.BackgroundColor3 = SETTINGS.Safety.AntiFall and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(40, 40, 40)
     AntiFallToggle.Text = "Anti-Fall: "..(SETTINGS.Safety.AntiFall and "ON" or "OFF")
     UpdateAntiFall()
-    SaveSettings()
+    SaveSettings() -- ✅ Auto-save
 end)
 
 SpeedApply.MouseButton1Click:Connect(function()
@@ -508,11 +517,14 @@ SpeedApply.MouseButton1Click:Connect(function()
     if speed and speed > 0 then
         SETTINGS.Movement.Speed = speed
         ApplySpeed()
-        SaveSettings()
+        SaveSettings() -- ✅ Auto-save speed
     end
 end)
 
-TeleportButton.MouseButton1Click:Connect(Teleport)
+TeleportButton.MouseButton1Click:Connect(function()
+    Teleport()
+    SaveSettings() -- Save last target
+end)
 
 -- == Initialize ==
 UpdatePlayerList()
@@ -541,7 +553,7 @@ Players.PlayerRemoving:Connect(function(p)
     UpdatePlayerList()
 end)
 
--- == Auto Save Every 10 Seconds ==
-while wait(10) do
+-- == Auto-Save Every 5 Seconds (Extra Safety) ==
+while wait(5) do
     SaveSettings()
 end
